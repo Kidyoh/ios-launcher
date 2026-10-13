@@ -3,7 +3,7 @@
 A real Android launcher (you can set it as your default Home app) that recreates the **iOS 26 / iOS 27 Home Screen** and its **Liquid Glass** design, written in Kotlin and Jetpack Compose.
 
 <p>
-  <img src="docs/screenshots/01_home.jpg" width="200" alt="Home Screen">
+  <img src="docs/screenshots/18_island_music.jpg" width="200" alt="Home Screen with Dynamic Island">
   <img src="docs/screenshots/16_notification_center.jpg" width="200" alt="Notification Center">
   <img src="docs/screenshots/17_control_center.jpg" width="200" alt="Control Center">
   <img src="docs/screenshots/11_app_library.jpg" width="200" alt="App Library">
@@ -22,6 +22,9 @@ So icons scrolling under the dock in the App Library blur and warp through it, a
 The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liquid Glass*: slide left for clear glass, right for more tint.
 
 ## Features
+
+- **Dynamic Island** — a black pill around your front camera that springs open for music (album art and live sound bars; tap for the full player with progress and controls), charging, the silent switch and new notifications. With *Display over other apps* allowed it shows over **every** app; it steps aside in landscape.
+- **iPhone-style icons** — an original icon set in the iOS style for built-in apps (Phone, Messages, your browser, Settings, Camera, Photos, Mail, a Calendar icon showing today's date, Clock, Maps, Notes, Calculator, Contacts, Files, Music and more), matched automatically to your default apps. Long-press any app → **Change Icon…** to pick one, or **Rename…** to change its Home Screen name.
 
 - **Home Screen** — 4×6 (or 5×6) pages, squircle icons, labels, the iOS 26 glass **Search** pill that turns into page dots while you swipe, glass **dock**.
 - **Jiggle mode** — long-press empty space (or long-press an icon and move). Drag to rearrange, hold at the screen edge to change page, drop an app on another to make a **folder**, drag into / out of the dock and folders. Edit menu with **Add Widget**, **Customize**, **Edit Wallpaper**, plus **Undo / Redo** (an iOS 27 addition).
@@ -51,6 +54,12 @@ The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liq
   <img src="docs/screenshots/10_widget_gallery.jpg" width="200" alt="Widgets">
 </p>
 <p>
+  <img src="docs/screenshots/19_island_expanded.jpg" width="200" alt="Island player">
+  <img src="docs/screenshots/20_island_notification.jpg" width="200" alt="Island notification">
+  <img src="docs/screenshots/21_island_charging.jpg" width="200" alt="Island charging">
+  <img src="docs/screenshots/22_change_icon.jpg" width="200" alt="Change icon">
+</p>
+<p>
   <img src="docs/screenshots/13_onboarding.jpg" width="200" alt="Welcome">
   <img src="docs/screenshots/14_settings.jpg" width="200" alt="Settings">
   <img src="docs/screenshots/15_icons_and_glass.jpg" width="200" alt="Icons and glass">
@@ -58,7 +67,7 @@ The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liq
 
 ## Permissions it asks for
 
-Only when you use the feature: **location** (Weather widget), **calendar** (events in the Calendar widget), **notification access** (badges, Notification Center, Now Playing), **modify system settings** (brightness and rotation lock in Control Center) and **Do Not Disturb access**.
+Only when you use the feature: **display over other apps** (Dynamic Island everywhere), **location** (Weather widget), **calendar** (events in the Calendar widget), **notification access** (badges, Notification Center, Now Playing), **modify system settings** (brightness and rotation lock in Control Center) and **Do Not Disturb access**.
 
 ## Install
 
@@ -98,4 +107,5 @@ app/src/main/java/dev/kidyoh/liquid/
 - Screenshots are rendered on the JVM with Robolectric + Roborazzi using stand-in app icons; on your phone you'll see your real apps.
 - Third-party Android home-screen widgets aren't hosted yet — only the built-in iOS-style widgets.
 - Android doesn't let a launcher replace the lock screen, the status bar or other apps; Notification Center and Control Center are the launcher's own and open from the Home Screen.
+- The icon set is original artwork in an iOS-like style, not Apple's icons. A launcher can change apps' Home Screen icons and names, not how the apps look inside.
 - Font: [Inter](https://rsms.me/inter/) (SIL Open Font License, see `licenses/`), the closest open match to SF Pro. Not affiliated with Apple.

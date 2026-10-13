@@ -33,13 +33,23 @@ class IconRenderer(private val context: Context) {
     }
     private val density = context.resources.displayMetrics.densityDpi
 
-    fun cached(app: AppEntry, style: IconStyle, size: Int, tint: Int): ImageBitmap? = cache[key(app.id, style, size, tint)]
+    /** Set by LiquidApp once apps are loaded. */
+    var pack: IconPack? = null
+
+    private fun keyFor(app: AppEntry, style: IconStyle, size: Int, tint: Int): String {
+        val p = pack?.iconFor(app)
+        return key(app.id, style, size, tint) + (p?.let { "|${it.name}${it.variant()}" } ?: "")
+    }
+
+    fun cached(app: AppEntry, style: IconStyle, size: Int, tint: Int): ImageBitmap? = cache[keyFor(app, style, size, tint)]
 
     suspend fun icon(app: AppEntry, style: IconStyle, size: Int, tint: Int): ImageBitmap {
-        val k = key(app.id, style, size, tint)
+        val k = keyFor(app, style, size, tint)
         cache[k]?.let { return it }
+        val p = pack?.iconFor(app)
         return withContext(Dispatchers.Default) {
-            val drawable = runCatching { app.iconLoader(density) }.getOrNull()
+            val drawable = p?.drawable()
+                ?: runCatching { app.iconLoader(density) }.getOrNull()
                 ?: context.packageManager.defaultActivityIcon
             val bmp = render(drawable, style, size, tint)
             if (app.isWork) badge(bmp, app)
@@ -50,6 +60,13 @@ class IconRenderer(private val context: Context) {
     /** Renders a plain drawable (e.g. an app shortcut icon) as a Default-style squircle. */
     suspend fun plain(drawable: Drawable, size: Int, style: IconStyle = IconStyle.Default, tint: Int = 0): ImageBitmap =
         withContext(Dispatchers.Default) { render(drawable, style, size, tint).asImageBitmap() }
+
+    /** A pack icon in the given style, for the Change Icon picker. */
+    suspend fun packIcon(icon: PackIcon, style: IconStyle, size: Int, tint: Int): ImageBitmap {
+        val k = "pack:${icon.name}${icon.variant()}|$style|$size|$tint"
+        cache[k]?.let { return it }
+        return withContext(Dispatchers.Default) { render(icon.drawable(), style, size, tint).asImageBitmap().also { cache.put(k, it) } }
+    }
 
     fun clear() = cache.evictAll()
 
@@ -73,6 +90,7 @@ class IconRenderer(private val context: Context) {
                 }
             }
             IconStyle.Dark -> {
+                (adaptive?.foreground as? Glyph)?.dark = true
                 darkBackground(canvas, s, tint = null)
                 if (adaptive != null) drawLayer(canvas, adaptive.foreground, s)
                 else drawLegacy(canvas, drawable, s, background = null, scale = 0.72f)

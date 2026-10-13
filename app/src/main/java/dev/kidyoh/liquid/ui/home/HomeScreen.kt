@@ -19,6 +19,11 @@ import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,6 +64,11 @@ import dev.kidyoh.liquid.ui.glass.rememberBackdrop
 import dev.kidyoh.liquid.ui.glass.LocalGlass
 import dev.kidyoh.liquid.ui.center.ControlCenter
 import dev.kidyoh.liquid.ui.center.NotificationCenter
+import dev.kidyoh.liquid.ui.island.DynamicIsland
+import dev.kidyoh.liquid.ui.island.ISLAND_HEIGHT
+import dev.kidyoh.liquid.ui.island.IslandController
+import dev.kidyoh.liquid.ui.island.IslandOverlay
+import dev.kidyoh.liquid.ui.island.cameraCenter
 import dev.kidyoh.liquid.ui.library.AppLibrary
 import dev.kidyoh.liquid.ui.search.Spotlight
 import dev.kidyoh.liquid.ui.theme.isDark
@@ -168,7 +178,7 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
         val todayAmount = (1f - position).coerceIn(0f, 1f)
         val libraryAmount = (position - homeCount).coerceIn(0f, 1f)
         val overlay = controller.openFolder != null || controller.spotlight || controller.menu != null || controller.widgetGallery ||
-            controller.notificationCenter || controller.controlCenter
+            controller.notificationCenter || controller.controlCenter || controller.iconPicker != null || controller.renameApp != null
         val overlayAmount by animateFloatAsState(if (overlay) 1f else 0f, spring(stiffness = 500f), label = "overlay")
         val blurWallpaper = maxOf(todayAmount, libraryAmount, overlayAmount)
         val dim = (if (dark && settings.dimWallpaperInDark) 0.22f else 0f)
@@ -287,7 +297,31 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
                 ContextMenuOverlay(controller, screenW, screenH)
                 WidgetGallery(controller, metrics)
                 RemoveDialog(controller)
+                IconPickerSheet(controller)
+                RenameDialog(controller)
                 DragOverlay(controller, metrics)
+
+                // Dynamic Island on the Home Screen (the system-wide overlay takes over when allowed).
+                val overlayShowing by IslandOverlay.showing.collectAsState()
+                if (settings.dynamicIsland && !overlayShowing) {
+                    val islandScope = rememberCoroutineScope()
+                    val island = remember { IslandController(ctx.applicationContext, islandScope) }
+                    DisposableEffect(island) {
+                        island.start()
+                        controller.island = island
+                        onDispose { island.stop(); controller.island = null }
+                    }
+                    val view = LocalView.current
+                    val cam = remember(view, wPx) { cameraCenter(view) }
+                    val centerY = with(density) { cam?.second?.toDp() ?: (statusTop / 2) }
+                    val dx = with(density) { cam?.let { (it.first - wPx / 2f).toDp() } ?: 0.dp }
+                    if (island.expanded) {
+                        Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { island.collapse() } })
+                    }
+                    Box(Modifier.fillMaxWidth().offset(x = dx, y = (centerY - (ISLAND_HEIGHT / 2).dp).coerceAtLeast(8.dp))) {
+                        DynamicIsland(island, screenW - 20.dp, Modifier.align(Alignment.TopCenter))
+                    }
+                }
                 }
             }
         }

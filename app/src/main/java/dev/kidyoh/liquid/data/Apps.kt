@@ -62,6 +62,8 @@ class AppEntry(
     val iconLoader: (Int) -> Drawable?,
 ) {
     val id: String get() = key.flat
+
+    fun relabel(newLabel: String) = AppEntry(key, newLabel, component, user, category, installTime, isWork, flags, iconLoader)
 }
 
 class AppRepository(private val context: Context, private val scope: CoroutineScope) {
@@ -83,6 +85,24 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
     val installed: SharedFlow<List<String>> = _installed
 
     private var reloadJob: Job? = null
+    private val labelPrefs = context.getSharedPreferences("labels", Context.MODE_PRIVATE)
+    private var raw: List<AppEntry> = emptyList()
+
+    /** Home Screen names the user picked with Rename… */
+    fun customLabel(id: String): String? = labelPrefs.getString(id, null)
+
+    fun setLabel(id: String, label: String?) {
+        labelPrefs.edit().apply { if (label.isNullOrBlank()) remove(id) else putString(id, label.trim()) }.apply()
+        publish(raw)
+    }
+
+    private fun publish(list: List<AppEntry>) {
+        raw = list
+        val collator = Collator.getInstance().apply { strength = Collator.PRIMARY }
+        val shown = list.map { a -> customLabel(a.id)?.let { a.relabel(it) } ?: a }.sortedWith { a, b -> collator.compare(a.label, b.label) }
+        _apps.value = shown
+        _byId.value = shown.associateBy { it.id }
+    }
 
     private val callback = object : LauncherApps.Callback() {
         override fun onPackageAdded(packageName: String, user: UserHandle) = reload(newPackage = packageName)
@@ -102,8 +122,7 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
         reloadJob = scope.launch {
             val list = withContext(Dispatchers.IO) { query() }
             val before = _byId.value.keys
-            _apps.value = list
-            _byId.value = list.associateBy { it.id }
+            publish(list)
             _loaded.value = true
             if (newPackage != null) {
                 val fresh = list.filter { it.key.pkg == newPackage && it.id !in before }.map { it.id }
@@ -116,8 +135,7 @@ class AppRepository(private val context: Context, private val scope: CoroutineSc
     fun replaceForTest(list: List<AppEntry>) {
         reloadJob?.cancel()
         launcherApps.unregisterCallback(callback)
-        _apps.value = list
-        _byId.value = list.associateBy { it.id }
+        publish(list)
         _loaded.value = true
     }
 

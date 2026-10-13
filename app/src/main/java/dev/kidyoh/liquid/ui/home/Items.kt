@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Immutable
@@ -118,7 +119,8 @@ fun AppIconImage(app: AppEntry?, size: Dp, modifier: Modifier = Modifier, plate:
     val s = LocalHome.current.settings
     val px = with(LocalDensity.current) { size.roundToPx() }.coerceAtLeast(8)
     val renderer = LiquidApp.instance.icons
-    val bmp by produceState(app?.let { renderer.cached(it, s.iconStyle, px, s.tint) }, app?.id, s.iconStyle, px, s.tint) {
+    val packVersion by LiquidApp.instance.iconPack.version.collectAsState()
+    val bmp by produceState(app?.let { renderer.cached(it, s.iconStyle, px, s.tint) }, app?.id, s.iconStyle, px, s.tint, packVersion) {
         if (app != null) value = renderer.icon(app, s.iconStyle, px, s.tint)
     }
     Box(modifier.size(size)) {

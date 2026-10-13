@@ -24,7 +24,9 @@ import dev.kidyoh.liquid.system.CalendarEvents
 import dev.kidyoh.liquid.system.DayEvent
 import dev.kidyoh.liquid.system.NotificationItem
 import dev.kidyoh.liquid.system.WeatherNow
+import dev.kidyoh.liquid.system.NowPlaying
 import dev.kidyoh.liquid.ui.home.FolderOpen
+import dev.kidyoh.liquid.ui.island.IslandMode
 import dev.kidyoh.liquid.ui.home.MenuRequest
 import dev.kidyoh.liquid.ui.home.RemoveRequest
 import org.junit.Rule
@@ -123,6 +125,30 @@ class ScreenshotTest {
             app.layout.clearHistory()
         }
         shot("01_home")
+
+        // Dynamic Island states.
+        val art = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888).also { b ->
+            android.graphics.Canvas(b).drawPaint(android.graphics.Paint().apply {
+                shader = android.graphics.LinearGradient(0f, 0f, 64f, 64f, 0xFFFF5E62.toInt(), 0xFF7B2FF7.toInt(), android.graphics.Shader.TileMode.CLAMP)
+            })
+        }
+        val song = IslandMode.Media(
+            NowPlaying("Blinding Lights", "The Weeknd", art, true, null, 72_000L, android.os.SystemClock.elapsedRealtime(), 200_000L),
+            androidx.compose.ui.graphics.Color(0xFFFF6B8A),
+        )
+        ui { controller.island?.showForTest(song) }
+        shot("18_island_music")
+        ui { controller.island?.showForTest(song, expand = true) }
+        shot("19_island_expanded")
+        ui { controller.island?.showForTest(IslandMode.Note(Badges.items.value[1])) }
+        shot("20_island_notification")
+        ui { controller.island?.showForTest(IslandMode.Charging(62, true)) }
+        shot("21_island_charging")
+        ui { controller.island?.showForTest(IslandMode.Idle) }
+
+        ui { controller.iconPicker = app.apps.byId.value[id("Browser")] }
+        shot("22_change_icon")
+        ui { controller.iconPicker = null }
 
         ui { controller.notificationCenter = true }
         shot("16_notification_center")

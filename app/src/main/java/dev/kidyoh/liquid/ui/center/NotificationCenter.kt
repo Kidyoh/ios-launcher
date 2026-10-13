@@ -185,7 +185,7 @@ fun NotificationCenter(controller: HomeController, topInset: Dp, bottomInset: Dp
     }
 }
 
-private fun openNotification(ctx: android.content.Context, n: NotificationItem) {
+fun openNotification(ctx: android.content.Context, n: NotificationItem) {
     val pi = n.intent
     if (pi != null) {
         runCatching {

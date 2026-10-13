@@ -106,6 +106,8 @@ class SettingsHost(
     val onMakeDefault: () -> Unit,
     val onBadgeAccess: () -> Unit,
     val onFinishOnboarding: () -> Unit,
+    val overlayAccess: Boolean = false,
+    val onOverlayAccess: () -> Unit = {},
 )
 
 @Composable
@@ -230,6 +232,23 @@ private fun RootScreen(s: LauncherSettings, host: SettingsHost, push: (String) -
                 SettingRow("Appearance", Glyphs.Moon, IOS.Indigo, chevron = false)
                 Segmented(ThemeMode.entries, s.theme, { it.label }, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) { m ->
                     app.settings.update { it.copy(theme = m) }
+                }
+            }
+
+            Section(
+                "Dynamic Island",
+                footer = if (s.islandEverywhere && !host.overlayAccess) "To show the island over other apps, allow \"Display over other apps\". Music and notifications in the island need notification access."
+                else "Grows around your front camera for music, charging, the silent switch and new notifications. Tap it while music plays for controls.",
+            ) {
+                ToggleRow("Dynamic Island", s.dynamicIsland, Glyphs.Sparkle, Color(0xFF1C1C1E).takeIf { !p.dark } ?: IOS.Indigo) { v ->
+                    app.settings.update { it.copy(dynamicIsland = v) }
+                }
+                if (s.dynamicIsland) {
+                    RowDivider()
+                    ToggleRow("Show Over All Apps", s.islandEverywhere && host.overlayAccess, Glyphs.Mirror, IOS.Blue) { v ->
+                        if (v && !host.overlayAccess) host.onOverlayAccess()
+                        app.settings.update { it.copy(islandEverywhere = v) }
+                    }
                 }
             }
 
@@ -367,6 +386,9 @@ private fun AppearanceScreen(s: LauncherSettings, canGoBack: Boolean, onBack: ()
     Screen("Icons & Glass", back = if (canGoBack) "Settings" else null, onBack = onBack) {
         Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
             PhonePreview(170.dp, s)
+        }
+        Section(footer = "Gives Phone, Messages, your browser, Settings, Camera, Photos and other built-in apps an iPhone-style icon. Long-press any app and choose Change Icon… to pick one yourself.") {
+            ToggleRow("iPhone-Style Icons", s.iosIcons, Glyphs.Grid, IOS.Blue) { v -> app.settings.update { it.copy(iosIcons = v) } }
         }
         Section("Icon Style", footer = "Dark puts each icon on black. Tinted turns icons into one colour. Clear makes them frosted glass.") {
             Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {

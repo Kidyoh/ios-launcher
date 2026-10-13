@@ -5,12 +5,17 @@ import dev.kidyoh.liquid.data.AppRepository
 import dev.kidyoh.liquid.data.LayoutRepository
 import dev.kidyoh.liquid.data.SettingsStore
 import dev.kidyoh.liquid.data.UsageTracker
+import dev.kidyoh.liquid.icons.IconPack
 import dev.kidyoh.liquid.icons.IconRenderer
 import dev.kidyoh.liquid.system.WeatherRepository
 import dev.kidyoh.liquid.wallpaper.WallpaperRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import dev.kidyoh.liquid.ui.island.IslandOverlay
 
 class LiquidApp : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -22,6 +27,7 @@ class LiquidApp : Application() {
     lateinit var icons: IconRenderer private set
     lateinit var wallpaper: WallpaperRepository private set
     lateinit var weather: WeatherRepository private set
+    lateinit var iconPack: IconPack private set
 
     override fun onCreate() {
         super.onCreate()
@@ -33,6 +39,13 @@ class LiquidApp : Application() {
         layout = LayoutRepository(this, scope, apps, settings)
         wallpaper = WallpaperRepository(this, scope, settings)
         weather = WeatherRepository(this, scope)
+        iconPack = IconPack(this, scope, apps, settings)
+        icons.pack = iconPack
+        scope.launch {
+            settings.state.map { Triple(it.dynamicIsland, it.islandEverywhere, it.onboarded) }.distinctUntilChanged().collect {
+                IslandOverlay.sync(this@LiquidApp)
+            }
+        }
     }
 
     override fun onTrimMemory(level: Int) {

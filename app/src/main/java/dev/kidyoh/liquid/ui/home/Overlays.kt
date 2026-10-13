@@ -219,6 +219,10 @@ fun ContextMenuOverlay(controller: HomeController, screenW: Dp, screenH: Dp) {
                             MenuDivider()
                         }
                         if (app != null) {
+                            MenuRow("Change Icon…", Glyphs.Paint) { close(); controller.iconPicker = app }
+                            MenuDivider()
+                            MenuRow("Rename…", Glyphs.Pencil) { close(); controller.renameApp = app }
+                            MenuDivider()
                             MenuRow("Share App", Glyphs.Share) { close(); SystemActions.share(ctx, app) }
                             MenuDivider()
                             MenuRow("App Info", Glyphs.Info) { close(); SystemActions.appInfo(ctx, app) }
@@ -230,6 +234,10 @@ fun ContextMenuOverlay(controller: HomeController, screenW: Dp, screenH: Dp) {
                     } else {
                         MenuRow("Edit Home Screen", Glyphs.Grid) { controller.enterEdit() }
                         if (app != null) {
+                            MenuDivider()
+                            MenuRow("Change Icon…", Glyphs.Paint) { close(); controller.iconPicker = app }
+                            MenuDivider()
+                            MenuRow("Rename…", Glyphs.Pencil) { close(); controller.renameApp = app }
                             MenuDivider()
                             MenuRow("Share App", Glyphs.Share) { close(); SystemActions.share(ctx, app) }
                             MenuDivider()

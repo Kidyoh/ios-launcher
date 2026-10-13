@@ -71,12 +71,17 @@ data class RemoveRequest(val item: HomeItem, val source: DragSource, val app: Ap
 class HomeController(private val app: LiquidApp, private val scope: CoroutineScope) {
     val geometry = Geometry()
 
+    /** The in-launcher Dynamic Island, when the system-wide one isn't showing. */
+    var island: dev.kidyoh.liquid.ui.island.IslandController? = null
+
     var editMode by mutableStateOf(false)
         private set
     var openFolder by mutableStateOf<FolderOpen?>(null)
     var menu by mutableStateOf<MenuRequest?>(null)
     var spotlight by mutableStateOf(false)
     var notificationCenter by mutableStateOf(false)
+    var iconPicker by mutableStateOf<AppEntry?>(null)
+    var renameApp by mutableStateOf<AppEntry?>(null)
     var controlCenter by mutableStateOf(false)
     var removeRequest by mutableStateOf<RemoveRequest?>(null)
     var widgetGallery by mutableStateOf(false)
@@ -97,7 +102,7 @@ class HomeController(private val app: LiquidApp, private val scope: CoroutineSco
     private val layout: HomeLayout? get() = app.layout.layout.value
 
     val anyOverlay: Boolean get() = openFolder != null || menu != null || spotlight || removeRequest != null || widgetGallery ||
-        notificationCenter || controlCenter
+        notificationCenter || controlCenter || iconPicker != null || renameApp != null
 
     fun enterEdit() {
         if (!editMode) app.layout.clearHistory()
@@ -113,6 +118,8 @@ class HomeController(private val app: LiquidApp, private val scope: CoroutineSco
     /** Back / Home press: close the top-most thing. Returns false if there was nothing to close. */
     fun dismissTop(): Boolean = when {
         removeRequest != null -> { removeRequest = null; true }
+        renameApp != null -> { renameApp = null; true }
+        iconPicker != null -> { iconPicker = null; true }
         menu != null -> { menu = null; true }
         widgetGallery -> { widgetGallery = false; true }
         editMenu -> { editMenu = false; true }

@@ -28,6 +28,11 @@ data class LauncherSettings(
     val swipeDown: SwipeDownAction = SwipeDownAction.Search,
     val tint: Int = 0xFFFFB340.toInt(),
     val onboarded: Boolean = false,
+    /** Swap built-in apps' icons for the iPhone-style set. */
+    val iosIcons: Boolean = true,
+    val dynamicIsland: Boolean = true,
+    /** Show the Dynamic Island over every app (needs "Display over other apps"). */
+    val islandEverywhere: Boolean = true,
 )
 
 class SettingsStore(context: Context) {
@@ -68,6 +73,9 @@ class SettingsStore(context: Context) {
             swipeDown = enumOr(prefs.getString("swipeDown", null), d.swipeDown),
             tint = prefs.getInt("tint", d.tint),
             onboarded = prefs.getBoolean("onboarded", d.onboarded),
+            iosIcons = prefs.getBoolean("iosIcons", d.iosIcons),
+            dynamicIsland = prefs.getBoolean("dynamicIsland", d.dynamicIsland),
+            islandEverywhere = prefs.getBoolean("islandEverywhere", d.islandEverywhere),
         )
     }
 
@@ -87,6 +95,9 @@ class SettingsStore(context: Context) {
         putString("swipeDown", s.swipeDown.name)
         putInt("tint", s.tint)
         putBoolean("onboarded", s.onboarded)
+        putBoolean("iosIcons", s.iosIcons)
+        putBoolean("dynamicIsland", s.dynamicIsland)
+        putBoolean("islandEverywhere", s.islandEverywhere)
     }
 
     private inline fun <reified T : Enum<T>> enumOr(name: String?, fallback: T): T =

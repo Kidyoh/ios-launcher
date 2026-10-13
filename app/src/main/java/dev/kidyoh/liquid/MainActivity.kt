@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         (application as LiquidApp).wallpaper.refreshIfSystem()
         (application as LiquidApp).weather.refresh()
+        dev.kidyoh.liquid.ui.island.IslandOverlay.sync(this)
     }
 
     override fun onStop() {

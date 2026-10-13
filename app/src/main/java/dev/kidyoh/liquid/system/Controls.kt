@@ -26,6 +26,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /** Small wrappers around what Android lets a launcher control directly, for Control Center. */
 object Controls {
@@ -151,47 +154,81 @@ data class NowPlaying(
     val art: Bitmap?,
     val playing: Boolean,
     val controller: MediaController?,
-)
+    val position: Long = 0L,
+    val positionTime: Long = 0L,
+    val duration: Long = 0L,
+    val speed: Float = 1f,
+) {
+    val active: Boolean get() = controller != null && (title != null || playing)
 
-/** The active media session (needs notification access, which badges already use). */
+    /** Where playback is right now, extrapolated from the last report. */
+    fun positionNow(now: Long = android.os.SystemClock.elapsedRealtime()): Long =
+        if (playing) (position + ((now - positionTime) * speed).toLong()).coerceIn(0L, if (duration > 0) duration else Long.MAX_VALUE) else position
+}
+
+/** Follows the active media session. Needs notification access, which badges already use. */
+class MediaWatcher(private val context: Context) {
+    val state = kotlinx.coroutines.flow.MutableStateFlow(NowPlaying(null, null, null, false, null))
+    private val msm = context.getSystemService(MediaSessionManager::class.java)
+    private val listener = ComponentName(context, BadgeService::class.java)
+    private var current: MediaController? = null
+    private val handler = Handler(Looper.getMainLooper())
+
+    private val cb = object : MediaController.Callback() {
+        override fun onMetadataChanged(metadata: MediaMetadata?) = publish()
+        override fun onPlaybackStateChanged(s: PlaybackState?) = publish()
+        override fun onSessionDestroyed() = pick(runCatching { msm.getActiveSessions(listener) }.getOrNull())
+    }
+    private val sessions = MediaSessionManager.OnActiveSessionsChangedListener { pick(it) }
+
+    fun start() {
+        runCatching {
+            pick(msm.getActiveSessions(listener))
+            msm.addOnActiveSessionsChangedListener(sessions, listener, handler)
+        }
+    }
+
+    fun stop() {
+        current?.unregisterCallback(cb)
+        runCatching { msm.removeOnActiveSessionsChangedListener(sessions) }
+    }
+
+    private fun pick(list: List<MediaController>?) {
+        current?.unregisterCallback(cb)
+        current = list?.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: list?.firstOrNull()
+        current?.registerCallback(cb, handler)
+        publish()
+    }
+
+    private fun publish() {
+        val c = current
+        val m = c?.metadata
+        val ps = c?.playbackState
+        state.value = NowPlaying(
+            title = m?.getString(MediaMetadata.METADATA_KEY_TITLE),
+            artist = m?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: m?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST),
+            art = m?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: m?.getBitmap(MediaMetadata.METADATA_KEY_ART),
+            playing = ps?.state == PlaybackState.STATE_PLAYING,
+            controller = c,
+            position = ps?.position ?: 0L,
+            positionTime = ps?.lastPositionUpdateTime ?: 0L,
+            duration = m?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L,
+            speed = ps?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
+        )
+    }
+}
+
+/** The active media session for Compose. */
 @Composable
 fun rememberNowPlaying(): State<NowPlaying> {
     val ctx = LocalContext.current
-    val state = remember { mutableStateOf(NowPlaying(null, null, null, false, null)) }
-    DisposableEffect(ctx) {
-        val msm = ctx.getSystemService(MediaSessionManager::class.java)
-        val listener = ComponentName(ctx, BadgeService::class.java)
-        var current: MediaController? = null
-        fun publish() {
-            val c = current
-            val m = c?.metadata
-            state.value = NowPlaying(
-                title = m?.getString(MediaMetadata.METADATA_KEY_TITLE),
-                artist = m?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: m?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST),
-                art = m?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: m?.getBitmap(MediaMetadata.METADATA_KEY_ART),
-                playing = c?.playbackState?.state == PlaybackState.STATE_PLAYING,
-                controller = c,
-            )
-        }
-        val cb = object : MediaController.Callback() {
-            override fun onMetadataChanged(metadata: MediaMetadata?) = publish()
-            override fun onPlaybackStateChanged(s: PlaybackState?) = publish()
-        }
-        fun pick(list: List<MediaController>?) {
-            current?.unregisterCallback(cb)
-            current = list?.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING } ?: list?.firstOrNull()
-            current?.registerCallback(cb, Handler(Looper.getMainLooper()))
-            publish()
-        }
-        val sessions = MediaSessionManager.OnActiveSessionsChangedListener { pick(it) }
-        runCatching {
-            pick(msm.getActiveSessions(listener))
-            msm.addOnActiveSessionsChangedListener(sessions, listener)
-        }
-        onDispose {
-            current?.unregisterCallback(cb)
-            runCatching { msm.removeOnActiveSessionsChangedListener(sessions) }
-        }
+    val watcher = remember { MediaWatcher(ctx.applicationContext) }
+    val state = remember { mutableStateOf(watcher.state.value) }
+    DisposableEffect(watcher) {
+        val scope = MainScope()
+        scope.launch { watcher.state.collect { state.value = it } }
+        watcher.start()
+        onDispose { watcher.stop(); scope.cancel() }
     }
     return state
 }

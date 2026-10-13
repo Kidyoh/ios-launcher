@@ -20,6 +20,7 @@ import dev.kidyoh.liquid.ui.theme.isDark
 class SettingsActivity : ComponentActivity() {
     private var isDefault by mutableStateOf(false)
     private var badgeAccess by mutableStateOf(false)
+    private var overlayAccess by mutableStateOf(false)
 
     private val requestHome = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         refresh()
@@ -47,6 +48,12 @@ class SettingsActivity : ComponentActivity() {
                         onMakeDefault = { requestHome.launch(SystemActions.defaultHomeIntent(this)) },
                         onBadgeAccess = { runCatching { startActivity(SystemActions.notificationAccessIntent()) } },
                         onFinishOnboarding = { app.settings.update { it.copy(onboarded = true) } },
+                        overlayAccess = overlayAccess,
+                        onOverlayAccess = {
+                            runCatching {
+                                startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName")))
+                            }
+                        },
                     ),
                 )
             }
@@ -61,6 +68,8 @@ class SettingsActivity : ComponentActivity() {
     private fun refresh() {
         isDefault = SystemActions.isDefaultHome(this)
         badgeAccess = Badges.hasAccess(this)
+        overlayAccess = dev.kidyoh.liquid.ui.island.IslandOverlay.canShow(this)
+        dev.kidyoh.liquid.ui.island.IslandOverlay.sync(this)
     }
 
     companion object {
