@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Liquid Launcher</string>
+    <string name="settings_name">Launcher Settings</string>
+    <string name="badges_service">Liquid Launcher badges</string>
+</resources>
