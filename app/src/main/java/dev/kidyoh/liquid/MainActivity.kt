@@ -8,6 +8,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
+import dev.kidyoh.liquid.system.Permissions
 import dev.kidyoh.liquid.ui.home.HomeController
 import dev.kidyoh.liquid.ui.home.HomeScreen
 import dev.kidyoh.liquid.ui.theme.LiquidTheme
@@ -28,6 +30,11 @@ class MainActivity : ComponentActivity() {
     @androidx.annotation.VisibleForTesting
     internal var controller: HomeController? = null
 
+    private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        Permissions.onResult()
+        (application as LiquidApp).weather.refresh(maxAgeMs = 0)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -35,6 +42,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val app = application as LiquidApp
+        Permissions.request = { permissions.launch(it) }
 
         setContent {
             val settings by app.settings.state.collectAsState()
@@ -68,6 +76,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         (application as LiquidApp).wallpaper.refreshIfSystem()
+        (application as LiquidApp).weather.refresh()
     }
 
     override fun onStop() {
@@ -75,5 +84,7 @@ class MainActivity : ComponentActivity() {
         controller?.cancelDrag()
         controller?.menu = null
         controller?.spotlight = false
+        controller?.notificationCenter = false
+        controller?.controlCenter = false
     }
 }

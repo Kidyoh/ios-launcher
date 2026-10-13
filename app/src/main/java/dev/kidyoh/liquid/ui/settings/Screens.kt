@@ -55,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
@@ -163,17 +164,20 @@ private fun Screen(title: String, back: String? = null, onBack: () -> Unit = {},
             .navigationBarsPadding()
             .padding(bottom = 30.dp)
     ) {
-        Box(Modifier.fillMaxWidth().height(44.dp)) {
+        Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp)) {
             if (back != null) {
-                Row(
+                // iOS 26: a round glass back button instead of "< Settings".
+                Box(
                     Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = 8.dp)
+                        .size(46.dp)
+                        .shadow(if (p.dark) 0.dp else 6.dp, CircleShape)
+                        .background(if (p.dark) Color(0xFF2C2C2E) else Color.White, CircleShape)
+                        .border(0.6.dp, Color.White.copy(alpha = if (p.dark) 0.12f else 0.6f), CircleShape)
                         .clickable(interactionSource = remember { noRipple() }, indication = null, onClick = onBack),
-                    verticalAlignment = Alignment.CenterVertically,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Glyphs.ChevronLeft, null, tint = p.accent, modifier = Modifier.size(26.dp))
-                    Text(back, style = TextStyle(fontFamily = Inter, fontSize = 17.sp, color = p.accent))
+                    Icon(Glyphs.ChevronLeft, back, tint = p.label, modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -189,28 +193,29 @@ private fun RootScreen(s: LauncherSettings, host: SettingsHost, push: (String) -
     var confirmReset by remember { mutableStateOf(false) }
     Box {
         Screen("Settings") {
-            // Header card
+            // Header card, laid out like an iOS 26 Settings detail page.
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).background(p.card, RoundedCornerShape(26.dp)).padding(18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).background(p.card, RoundedCornerShape(30.dp)).padding(20.dp),
             ) {
                 Box(
-                    Modifier.size(72.dp).clip(dev.kidyoh.liquid.icons.SquircleShape)
+                    Modifier.size(64.dp).clip(dev.kidyoh.liquid.icons.SquircleShape)
                         .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF4FACFE), Color(0xFF6A5BFF), Color(0xFFE160C9)))),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Glyphs.Grid, null, tint = Color.White, modifier = Modifier.size(38.dp)) }
-                Spacer(Modifier.height(12.dp))
-                Text("Liquid Launcher", style = TextStyle(fontFamily = Inter, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = p.label))
+                ) { Icon(Glyphs.Grid, null, tint = Color.White, modifier = Modifier.size(34.dp)) }
+                Spacer(Modifier.height(14.dp))
+                Text("Liquid Launcher", style = TextStyle(fontFamily = Inter, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = p.label))
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    "An iOS-style Home Screen with Liquid Glass.",
-                    style = TextStyle(fontFamily = Inter, fontSize = 14.sp, color = p.secondaryLabel, textAlign = TextAlign.Center),
+                    "Your Home Screen, made of Liquid Glass: widgets, folders, App Library, Notification Center and Control Center.",
+                    style = TextStyle(fontFamily = Inter, fontSize = 16.sp, color = p.secondaryLabel),
                 )
+                Spacer(Modifier.height(16.dp))
+                RowDivider(0.dp)
                 Spacer(Modifier.height(14.dp))
                 if (host.isDefault) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Glyphs.Check, null, tint = IOS.Green, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Your default Home app", style = TextStyle(fontFamily = Inter, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = IOS.Green))
+                        Text("Default Home app", style = TextStyle(fontFamily = Inter, fontSize = 17.sp, color = p.label), modifier = Modifier.weight(1f))
+                        Icon(Glyphs.Check, null, tint = p.accent, modifier = Modifier.size(20.dp))
                     }
                 } else {
                     PrimaryButton("Set as Default Home App", Modifier.fillMaxWidth(), onClick = host.onMakeDefault)
@@ -222,7 +227,7 @@ private fun RootScreen(s: LauncherSettings, host: SettingsHost, push: (String) -
                 RowDivider()
                 SettingRow("Icons & Liquid Glass", Glyphs.Glass, IOS.Indigo, value = s.iconStyle.label, onClick = { push("appearance") })
                 RowDivider()
-                SettingRow("Appearance", Glyphs.Moon, Color(0xFF1C1C1E), chevron = false)
+                SettingRow("Appearance", Glyphs.Moon, IOS.Indigo, chevron = false)
                 Segmented(ThemeMode.entries, s.theme, { it.label }, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) { m ->
                     app.settings.update { it.copy(theme = m) }
                 }
@@ -247,8 +252,8 @@ private fun RootScreen(s: LauncherSettings, host: SettingsHost, push: (String) -
                 }
             }
 
-            Section("Gestures", footer = "Swiping down from the very top edge always opens notifications.") {
-                SettingRow("Swipe Down on Home Screen", Glyphs.ArrowDown, IOS.Orange, chevron = false)
+            Section("Gestures", footer = "Swipe down from the top-left for Notification Center and from the top-right for Control Center, like iPhone.") {
+                SettingRow("Swipe Down in the Middle", Glyphs.ArrowDown, IOS.Orange, chevron = false)
                 Segmented(SwipeDownAction.entries, s.swipeDown, { it.label }, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp)) { a ->
                     app.settings.update { it.copy(swipeDown = a) }
                 }
@@ -406,7 +411,7 @@ private fun AppearanceScreen(s: LauncherSettings, canGoBack: Boolean, onBack: ()
             Spacer(Modifier.height(8.dp))
         }
         Section("Wallpaper") {
-            ToggleRow("Dark Appearance Dims Wallpaper", s.dimWallpaperInDark, Glyphs.Moon, Color(0xFF1C1C1E)) { v ->
+            ToggleRow("Dark Appearance Dims Wallpaper", s.dimWallpaperInDark, Glyphs.Moon, IOS.Indigo) { v ->
                 app.settings.update { it.copy(dimWallpaperInDark = v) }
             }
         }

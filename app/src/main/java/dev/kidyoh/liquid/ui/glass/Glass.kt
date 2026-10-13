@@ -229,9 +229,14 @@ private class GlassNode(
                     blur = look.blur, w = w, h = h, margin = m.toFloat(), radius = radius, bezel = bezel, bend = bend,
                     rim = 1.5.dp.toPx(), tint = look.tint, tintAlpha = look.tintAlpha, highlight = look.highlight,
                 )
-            } else if (look.blur > 0.5f) {
-                BlurEffect(look.blur, look.blur, TileMode.Clamp)
-            } else null
+            } else {
+                val saturate = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.45f) })
+                val vibrant = AndroidRenderEffect.createColorFilterEffect(saturate)
+                val out = if (look.blur > 0.5f) {
+                    AndroidRenderEffect.createChainEffect(vibrant, AndroidRenderEffect.createBlurEffect(look.blur, look.blur, Shader.TileMode.CLAMP))
+                } else vibrant
+                out.asComposeRenderEffect()
+            }
         }
         val rel = origin - b.origin
         layer.record(IntSize(lw, lh)) {
@@ -327,6 +332,9 @@ float sdRoundRect(float2 p, float2 b, float r) {
 }
 
 float4 finish(float4 c, float2 local, float d, float2 n, float lens) {
+    // Vibrancy: iOS glass boosts the colour of what's behind it.
+    float l = dot(c.rgb, float3(0.2126, 0.7152, 0.0722));
+    c.rgb = clamp(mix(float3(l), c.rgb, 1.45), float3(0.0), float3(c.a));
     float3 t = tint.rgb * tint.a;
     c = float4(t + c.rgb * (1.0 - tint.a), tint.a + c.a * (1.0 - tint.a));
     float sheen = clamp(1.0 - local.y / size.y, 0.0, 1.0) * 0.04 * highlight;

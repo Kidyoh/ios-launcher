@@ -5,9 +5,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class WidgetKind(val title: String, val subtitle: String) {
+    Weather("Weather", "See the current conditions and today's high and low."),
     AnalogClock("Clock", "Check the current time at a glance."),
     WorldClock("World Clock", "Keep track of time in cities around the world."),
-    Calendar("Calendar", "See today's date."),
+    Calendar("Calendar", "See today's date and your next events."),
     Month("Calendar", "See this month and today's date."),
     Battery("Batteries", "Keep an eye on your battery level."),
 }

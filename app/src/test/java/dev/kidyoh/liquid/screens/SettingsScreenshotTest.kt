@@ -30,7 +30,7 @@ class SettingsScreenshotTest {
         val app = LiquidApp.instance
         app.settings.update { LauncherSettings(onboarded = onboarded) }
         app.apps.replaceForTest(FakeApps.create())
-        app.wallpaper.ensure("preset:aurora", dark, 786, 1704)
+        app.wallpaper.ensure("preset:orbit", dark, 786, 1704)
         compose.waitUntil(20_000) { ShadowLooper.idleMainLooper(); app.wallpaper.state.value.image != null }
         compose.setContent { Host(start, dark) }
         repeat(6) {
@@ -64,7 +64,7 @@ class SettingsRootScreenshotTest {
         app.settings.update { LauncherSettings(onboarded = true) }
         app.apps.replaceForTest(FakeApps.create())
         compose.setContent {
-            LiquidTheme(false) {
+            LiquidTheme(true) {
                 SettingsApp(null, SettingsHost(isDefault = false, badgeAccess = false, onMakeDefault = {}, onBadgeAccess = {}, onFinishOnboarding = {}))
             }
         }
@@ -84,10 +84,10 @@ class AppearanceScreenshotTest {
         val app = LiquidApp.instance
         app.settings.update { LauncherSettings(onboarded = true) }
         app.apps.replaceForTest(FakeApps.create())
-        app.wallpaper.ensure("preset:aurora", false, 786, 1704)
+        app.wallpaper.ensure("preset:orbit", true, 786, 1704)
         compose.waitUntil(20_000) { ShadowLooper.idleMainLooper(); app.wallpaper.state.value.image != null }
         compose.setContent {
-            LiquidTheme(false) {
+            LiquidTheme(true) {
                 SettingsApp("appearance", SettingsHost(isDefault = true, badgeAccess = true, onMakeDefault = {}, onBadgeAccess = {}, onFinishOnboarding = {}))
             }
         }

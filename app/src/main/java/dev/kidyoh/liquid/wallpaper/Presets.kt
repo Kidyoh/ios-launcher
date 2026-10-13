@@ -23,6 +23,8 @@ data class WallpaperPreset(
 
 object Presets {
     val all = listOf(
+        WallpaperPreset("orbit", "Orbit", 0xFF020A2E.toInt(), 0xFF071B5C.toInt(),
+            listOf(0xFF4561E0.toInt(), 0xFF1BA39A.toInt(), 0xFF5EC8FF.toInt()), 0xFF2E7BFF.toInt() to 0xFF5EC8FF.toInt()),
         WallpaperPreset("aurora", "Aurora", 0xFF1B2A6B.toInt(), 0xFF4B1E78.toInt(),
             listOf(0xFF3D7BFF.toInt(), 0xFFB84DFF.toInt(), 0xFF2EE6D6.toInt()), 0xFF6FA8FF.toInt() to 0xFFE07BFF.toInt()),
         WallpaperPreset("bloom", "Bloom", 0xFFFF7EB3.toInt(), 0xFF7A3CFF.toInt(),
@@ -44,6 +46,7 @@ object Presets {
     fun byId(id: String) = all.firstOrNull { it.id == id } ?: all.first()
 
     fun render(p: WallpaperPreset, w: Int, h: Int, dark: Boolean): Bitmap {
+        if (p.id == "orbit") return renderOrbit(p, w, h, dark)
         val bmp = createBitmap(w, h)
         val c = Canvas(bmp)
         val k = if (dark) 0.42f else 1f
@@ -96,6 +99,65 @@ object Presets {
         c.drawRect(0f, 0f, fw, fh * 0.25f, Paint().apply {
             shader = LinearGradient(0f, 0f, 0f, fh * 0.25f, Color.argb(40, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP)
         })
+        return bmp
+    }
+
+    /** Overlapping glass discs on deep navy with a glowing blue arc, like the iOS 26 default. */
+    private fun renderOrbit(p: WallpaperPreset, w: Int, h: Int, dark: Boolean): Bitmap {
+        val bmp = createBitmap(w, h)
+        val c = Canvas(bmp)
+        val fw = w.toFloat()
+        val fh = h.toFloat()
+        val k = if (dark) 0.72f else 1f
+        fun col(v: Int, a: Int = 255) = Color.argb(a, (Color.red(v) * k).toInt(), (Color.green(v) * k).toInt(), (Color.blue(v) * k).toInt())
+        val paint = { Paint(Paint.ANTI_ALIAS_FLAG or Paint.DITHER_FLAG) }
+
+        c.drawPaint(paint().apply { shader = LinearGradient(0f, 0f, fw, fh, col(p.top), col(p.bottom), Shader.TileMode.CLAMP) })
+
+        // Bright cyan light pooling at the bottom-right.
+        c.drawCircle(fw * 1.0f, fh * 0.9f, fw * 0.8f, paint().apply {
+            shader = RadialGradient(fw * 1.0f, fh * 0.9f, fw * 0.8f, col(0xFF6FD0FF.toInt(), 230), col(0xFF1E5BFF.toInt(), 0), Shader.TileMode.CLAMP)
+        })
+
+        // Big blue disc, top-right, lit from the upper left.
+        val bx = fw * 0.78f; val by = fh * 0.2f; val br = fw * 0.62f
+        c.drawCircle(bx, by, br, paint().apply {
+            shader = RadialGradient(bx - br * 0.45f, by - br * 0.1f, br * 1.5f,
+                intArrayOf(col(0xFF7C94F0.toInt()), col(0xFF4561E0.toInt()), col(0xFF1C2E8C.toInt())), floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP)
+        })
+        c.drawCircle(bx, by, br, paint().apply { style = Paint.Style.STROKE; strokeWidth = fw * 0.004f; color = col(0xFF9DB0FF.toInt(), 150) })
+
+        // Teal disc, bottom-left, overlapping.
+        val tx = fw * 0.02f; val ty = fh * 0.66f; val tr = fw * 0.78f
+        c.drawCircle(tx, ty, tr, paint().apply {
+            shader = RadialGradient(tx + tr * 0.35f, ty - tr * 0.35f, tr * 1.4f,
+                intArrayOf(col(0xFF3FD1BE.toInt()), col(0xFF1BA39A.toInt()), col(0xFF0B4A55.toInt())), floatArrayOf(0f, 0.4f, 1f), Shader.TileMode.CLAMP)
+        })
+        // Soft shadow where the teal disc meets the dark.
+        c.drawCircle(tx, ty, tr, paint().apply {
+            shader = RadialGradient(tx, ty, tr, intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, Color.argb(120, 0, 0, 10)), floatArrayOf(0f, 0.75f, 1f), Shader.TileMode.CLAMP)
+        })
+
+        // The thin glowing arc sweeping from bottom-left up to the right edge.
+        val ax = fw * 1.55f; val ay = fh * 0.62f; val ar = fw * 1.18f
+        c.drawCircle(ax, ay, ar, paint().apply {
+            style = Paint.Style.STROKE; strokeWidth = fw * 0.03f; color = col(0xFF2E7BFF.toInt(), 120)
+            maskFilter = BlurMaskFilter(fw * 0.03f, BlurMaskFilter.Blur.NORMAL)
+        })
+        c.drawCircle(ax, ay, ar, paint().apply { style = Paint.Style.STROKE; strokeWidth = fw * 0.006f; color = col(0xFF4F9BFF.toInt()) })
+        // Inside the arc everything is a little bluer and brighter.
+        c.save()
+        c.clipPath(Path().apply { addCircle(ax, ay, ar, Path.Direction.CW) })
+        c.drawPaint(paint().apply { color = col(0xFF1E5BFF.toInt(), 55) })
+        c.restore()
+
+        // Fine grain, like the textured iOS wallpaper.
+        val rnd = java.util.Random(7)
+        val grain = paint().apply { strokeWidth = 1f }
+        repeat((w * h) / 90) {
+            grain.color = Color.argb(rnd.nextInt(14), 255, 255, 255)
+            c.drawPoint(rnd.nextFloat() * fw, rnd.nextFloat() * fh, grain)
+        }
         return bmp
     }
 }

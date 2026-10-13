@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -117,11 +118,19 @@ fun rememberBattery(): State<BatteryInfo> {
 /** A widget on its glass card. [width]×[height] is the card size. */
 @Composable
 fun WidgetCard(kind: WidgetKind, size: WidgetSize, width: Dp, height: Dp, modifier: Modifier = Modifier) {
-    Glass(modifier.size(width, height), corner = min(width.value, height.value).dp * 0.16f + 4.dp, opacity = 0.04f) {
+    // iOS widgets are fairly solid (near-black in dark mode) unless you pick Clear glass.
+    val g = LocalGlass.current
+    val opacity = when {
+        g.level < 0.15f -> 0.03f
+        g.dark -> 0.42f
+        else -> 0.22f
+    }
+    Glass(modifier.size(width, height), corner = min(width.value, height.value).dp * 0.2f + 4.dp, opacity = opacity) {
         when (kind) {
+            WidgetKind.Weather -> Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (g.level < 0.15f) 0.45f else 1f }) { WeatherWidget() }
             WidgetKind.AnalogClock -> AnalogClockWidget()
             WidgetKind.WorldClock -> WorldClockWidget()
-            WidgetKind.Calendar -> CalendarWidget()
+            WidgetKind.Calendar -> CalendarEventsWidget()
             WidgetKind.Month -> MonthWidget()
             WidgetKind.Battery -> BatteryWidget()
         }
@@ -239,26 +248,6 @@ private fun WorldClockWidget() {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun CalendarWidget() {
-    val locale = LocalConfiguration.current.locales[0]
-    val now by rememberNow(60_000L)
-    val d = remember(now / 60_000) { LocalDate.now() }
-    val fg = onGlass()
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            d.dayOfWeek.getDisplayName(JTextStyle.FULL, locale).uppercase(),
-            style = TextStyle(fontFamily = Inter, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = IOS.Red, letterSpacing = 0.4.sp),
-        )
-        Text(
-            d.dayOfMonth.toString(),
-            style = TextStyle(fontFamily = Inter, fontSize = 52.sp, fontWeight = FontWeight.Light, color = fg, letterSpacing = (-2).sp),
-        )
-        Spacer(Modifier.weight(1f))
-        Text("No events today", style = TextStyle(fontFamily = Inter, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = onGlassSecondary()))
     }
 }
 

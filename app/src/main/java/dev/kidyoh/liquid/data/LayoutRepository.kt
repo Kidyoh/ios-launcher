@@ -42,7 +42,7 @@ class LayoutRepository(
 
     init {
         scope.launch {
-            val saved = withContext(Dispatchers.IO) { load() }
+            val saved = withContext(Dispatchers.IO) { load() }?.let(::migrate)
             apps.loaded.first { it }
             _layout.value = HomeGrid.normalize(reconcile(saved ?: defaultLayout()), columns)
             persist()
@@ -131,6 +131,21 @@ class LayoutRepository(
         if (file.exists()) json.decodeFromString(HomeLayout.serializer(), file.readText()) else null
     }.getOrNull()
 
+    /** v2 made the first page match iOS: Weather then Calendar, instead of Calendar then Clock. */
+    private fun migrate(l: HomeLayout): HomeLayout {
+        val prefs = context.getSharedPreferences("layout", Context.MODE_PRIVATE)
+        if (prefs.getInt("version", 1) >= 2) return l
+        prefs.edit().putInt("version", 2).apply()
+        val first = l.pages.firstOrNull() ?: return l
+        val cal = first.indexOfFirst { it is WidgetItem && it.kind == WidgetKind.Calendar && it.size == WidgetSize.Small }
+        val clock = first.indexOfFirst { it is WidgetItem && it.kind == WidgetKind.AnalogClock && it.size == WidgetSize.Small }
+        if (cal != 0 || clock != 1) return l
+        val page = first.toMutableList()
+        page[0] = WidgetItem(newId(), WidgetKind.Weather, WidgetSize.Small)
+        page[1] = first[0]
+        return l.copy(pages = listOf(page) + l.pages.drop(1))
+    }
+
     /** Drops apps that are no longer installed and folders that became empty. */
     private fun reconcile(l: HomeLayout): HomeLayout {
         val known = apps.byId.value
@@ -182,8 +197,8 @@ class LayoutRepository(
         val googleExtras = rest.filter { it.key.pkg.startsWith("com.google.android.") && it !in important }
 
         val page1 = mutableListOf<HomeItem>(
+            WidgetItem(newId(), WidgetKind.Weather, WidgetSize.Small),
             WidgetItem(newId(), WidgetKind.Calendar, WidgetSize.Small),
-            WidgetItem(newId(), WidgetKind.AnalogClock, WidgetSize.Small),
         )
         val used = mutableSetOf<String>()
         val folder = if (googleExtras.size >= 3) FolderItem(newId(), "Google", googleExtras.map { it.id }) else null

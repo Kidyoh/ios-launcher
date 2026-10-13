@@ -88,7 +88,7 @@ val LocalHome = compositionLocalOf<HomeEnv> { error("HomeEnv not provided") }
 
 val LabelStyle = TextStyle(
     fontFamily = Inter,
-    fontSize = 11.5.sp,
+    fontSize = 12.5.sp,
     fontWeight = FontWeight.Medium,
     color = Color.White,
     textAlign = TextAlign.Center,
@@ -144,15 +144,15 @@ fun IconLabel(text: String, width: Dp, modifier: Modifier = Modifier) {
 fun Badge(count: Int, modifier: Modifier = Modifier) {
     Box(
         modifier
-            .heightIn(min = 22.dp)
-            .widthIn(min = 22.dp)
+            .heightIn(min = 24.dp)
+            .widthIn(min = 24.dp)
             .background(IOS.Red, CircleShape)
-            .padding(horizontal = 6.dp),
+            .padding(horizontal = 7.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            if (count > 99) "99+" else count.toString(),
-            style = TextStyle(fontFamily = Inter, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White),
+            "%,d".format(count),
+            style = TextStyle(fontFamily = Inter, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.White),
         )
     }
 }
@@ -372,7 +372,7 @@ fun IconCell(
                 }
                 val badge = badgeCount ?: app?.let { env.badges[it.key.pkg] } ?: 0
                 if (env.settings.badges && badge > 0 && !editMode) {
-                    Badge(badge, Modifier.align(Alignment.TopEnd).offset(x = 7.dp, y = (-7).dp))
+                    Badge(badge, Modifier.align(Alignment.TopEnd).offset(x = 8.dp, y = (-8).dp))
                 }
                 if (editMode && onRemove != null) {
                     MinusBubble(onRemove, Modifier.align(Alignment.TopStart).offset(x = (-7).dp, y = (-7).dp))

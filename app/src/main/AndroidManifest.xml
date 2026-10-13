@@ -6,6 +6,21 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!-- Weather widget: Open-Meteo forecast for your approximate location. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Calendar widget: today's events. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- Control Center: Do Not Disturb, Bluetooth state, flashlight needs no permission. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission
+        android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Only to read the system wallpaper on Android 8–12, when the user picks "Use System Wallpaper". -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"

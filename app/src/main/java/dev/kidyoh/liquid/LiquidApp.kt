@@ -6,6 +6,7 @@ import dev.kidyoh.liquid.data.LayoutRepository
 import dev.kidyoh.liquid.data.SettingsStore
 import dev.kidyoh.liquid.data.UsageTracker
 import dev.kidyoh.liquid.icons.IconRenderer
+import dev.kidyoh.liquid.system.WeatherRepository
 import dev.kidyoh.liquid.wallpaper.WallpaperRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ class LiquidApp : Application() {
     lateinit var usage: UsageTracker private set
     lateinit var icons: IconRenderer private set
     lateinit var wallpaper: WallpaperRepository private set
+    lateinit var weather: WeatherRepository private set
 
     override fun onCreate() {
         super.onCreate()
@@ -30,6 +32,7 @@ class LiquidApp : Application() {
         apps = AppRepository(this, scope)
         layout = LayoutRepository(this, scope, apps, settings)
         wallpaper = WallpaperRepository(this, scope, settings)
+        weather = WeatherRepository(this, scope)
     }
 
     override fun onTrimMemory(level: Int) {

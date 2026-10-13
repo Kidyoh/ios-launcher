@@ -423,6 +423,7 @@ fun EditChrome(controller: HomeController, top: Dp) {
 }
 
 private val galleryEntries = listOf(
+    WidgetKind.Weather to WidgetSize.Small,
     WidgetKind.AnalogClock to WidgetSize.Small,
     WidgetKind.WorldClock to WidgetSize.Medium,
     WidgetKind.Calendar to WidgetSize.Small,

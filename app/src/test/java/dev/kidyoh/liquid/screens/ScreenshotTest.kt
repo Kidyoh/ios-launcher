@@ -19,6 +19,11 @@ import dev.kidyoh.liquid.data.IconStyle
 import dev.kidyoh.liquid.data.LauncherSettings
 import dev.kidyoh.liquid.data.LayoutOps
 import dev.kidyoh.liquid.data.ThemeMode
+import dev.kidyoh.liquid.system.Badges
+import dev.kidyoh.liquid.system.CalendarEvents
+import dev.kidyoh.liquid.system.DayEvent
+import dev.kidyoh.liquid.system.NotificationItem
+import dev.kidyoh.liquid.system.WeatherNow
 import dev.kidyoh.liquid.ui.home.FolderOpen
 import dev.kidyoh.liquid.ui.home.MenuRequest
 import dev.kidyoh.liquid.ui.home.RemoveRequest
@@ -81,7 +86,27 @@ class ScreenshotTest {
     @Test
     fun homeScreens() {
         compose.waitUntil(10_000) { app.layout.layout.value != null }
-        settings { it }
+        // Mirror a real phone: dark mode, the Orbit wallpaper, weather, events, badges and notifications.
+        settings { it.copy(theme = ThemeMode.Dark) }
+        ui {
+            app.weather.replaceForTest(WeatherNow("Arada", 14, 22, 11, 3, isDay = false, fetched = System.currentTimeMillis()))
+            val day = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 23); set(java.util.Calendar.MINUTE, 0) }.timeInMillis
+            CalendarEvents.testEvents = listOf(
+                DayEvent("Sleep", day - 2 * 3_600_000L, day + 3 * 3_600_000L, false, 0xFFBF5AF2.toInt()),
+                DayEvent("Gym", day + 8 * 3_600_000L, day + 10 * 3_600_000L + 1_800_000L, false, 0xFFFF2D92.toInt()),
+            )
+            val now = System.currentTimeMillis()
+            Badges.publish(
+                mapOf("com.whatsapp" to 1131, "com.android.settings" to 3, "com.google.android.apps.messaging" to 121, "com.google.android.youtube" to 11),
+                listOf(
+                    NotificationItem("1", "com.android.settings", "Shortcuts", "1 automation is enabled on your phone.", now - 17 * 60_000L, null, null, true),
+                    NotificationItem("2", "com.whatsapp", "Bemnet", "Are we still on for tonight?", now - 47 * 60_000L, null, null, true),
+                    NotificationItem("3", "com.whatsapp", "Family", "Photo", now - 50 * 60_000L, null, null, true),
+                    NotificationItem("4", "com.google.android.gm", "Nuzz celebrates 1,000 users", "Your image is ready to review", now - 57 * 60_000L, null, null, true),
+                    NotificationItem("5", "com.google.android.youtube", "New video", "A channel you follow just uploaded.", now - 26 * 3_600_000L, null, null, true),
+                ),
+            )
+        }
         ui {
             app.apps.replaceForTest(fakes)
             app.layout.reset()
@@ -98,6 +123,18 @@ class ScreenshotTest {
             app.layout.clearHistory()
         }
         shot("01_home")
+
+        ui { controller.notificationCenter = true }
+        shot("16_notification_center")
+        ui { controller.notificationCenter = false }
+
+        ui { controller.controlCenter = true }
+        shot("17_control_center")
+        ui { controller.controlCenter = false }
+
+        settings { it.copy(theme = ThemeMode.Light, wallpaper = "preset:aurora") }
+        shot("01b_home_light")
+        settings { it.copy(theme = ThemeMode.Dark) }
 
         ui { controller.enterEdit() }
         shot("05_edit_mode")
@@ -125,7 +162,7 @@ class ScreenshotTest {
         ui { controller.widgetGallery = false; controller.exitEdit() }
 
         settings { it.copy(theme = ThemeMode.Dark, wallpaper = "preset:ocean") }
-        shot("02_home_dark")
+        shot("02_home_ocean")
 
         settings { it.copy(iconStyle = IconStyle.Clear, glass = 0.1f, wallpaper = "preset:sunrise") }
         shot("03_home_clear")
@@ -135,7 +172,7 @@ class ScreenshotTest {
 
         settings { it.copy(iconStyle = IconStyle.Dark, theme = ThemeMode.Dark, wallpaper = "preset:aurora") }
         shot("04b_home_dark_icons")
-        settings { it }
+        settings { it.copy(theme = ThemeMode.Dark) }
 
         ui { controller.spotlight = true }
         settle()

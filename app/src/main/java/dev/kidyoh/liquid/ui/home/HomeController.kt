@@ -76,6 +76,8 @@ class HomeController(private val app: LiquidApp, private val scope: CoroutineSco
     var openFolder by mutableStateOf<FolderOpen?>(null)
     var menu by mutableStateOf<MenuRequest?>(null)
     var spotlight by mutableStateOf(false)
+    var notificationCenter by mutableStateOf(false)
+    var controlCenter by mutableStateOf(false)
     var removeRequest by mutableStateOf<RemoveRequest?>(null)
     var widgetGallery by mutableStateOf(false)
     var editMenu by mutableStateOf(false)
@@ -94,7 +96,8 @@ class HomeController(private val app: LiquidApp, private val scope: CoroutineSco
 
     private val layout: HomeLayout? get() = app.layout.layout.value
 
-    val anyOverlay: Boolean get() = openFolder != null || menu != null || spotlight || removeRequest != null || widgetGallery
+    val anyOverlay: Boolean get() = openFolder != null || menu != null || spotlight || removeRequest != null || widgetGallery ||
+        notificationCenter || controlCenter
 
     fun enterEdit() {
         if (!editMode) app.layout.clearHistory()
@@ -114,6 +117,8 @@ class HomeController(private val app: LiquidApp, private val scope: CoroutineSco
         widgetGallery -> { widgetGallery = false; true }
         editMenu -> { editMenu = false; true }
         spotlight -> { spotlight = false; true }
+        controlCenter -> { controlCenter = false; true }
+        notificationCenter -> { notificationCenter = false; true }
         openFolder != null -> { openFolder = null; true }
         editMode -> { exitEdit(); true }
         else -> false

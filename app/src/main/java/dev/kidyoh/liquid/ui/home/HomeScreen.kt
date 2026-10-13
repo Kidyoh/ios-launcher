@@ -52,12 +52,13 @@ import dev.kidyoh.liquid.data.SwipeDownAction
 import dev.kidyoh.liquid.data.WidgetItem
 import dev.kidyoh.liquid.data.span
 import dev.kidyoh.liquid.system.Badges
-import dev.kidyoh.liquid.system.SystemActions
 import dev.kidyoh.liquid.ui.glass.GlassEnv
 import dev.kidyoh.liquid.ui.glass.LocalBackdrop
 import dev.kidyoh.liquid.ui.glass.backdropSource
 import dev.kidyoh.liquid.ui.glass.rememberBackdrop
 import dev.kidyoh.liquid.ui.glass.LocalGlass
+import dev.kidyoh.liquid.ui.center.ControlCenter
+import dev.kidyoh.liquid.ui.center.NotificationCenter
 import dev.kidyoh.liquid.ui.library.AppLibrary
 import dev.kidyoh.liquid.ui.search.Spotlight
 import dev.kidyoh.liquid.ui.theme.isDark
@@ -96,7 +97,7 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
         val cols = settings.columns
         val gridPad = 14.dp
         val cellW = (screenW - gridPad * 2) / cols
-        val icon = (cellW * (if (cols >= 5) 0.70f else 0.64f) * settings.iconScale).coerceIn(44.dp, 76.dp)
+        val icon = (cellW * (if (cols >= 5) 0.72f else 0.69f) * settings.iconScale).coerceIn(44.dp, 78.dp)
         val dockH = icon + 30.dp
         val dockSide = 12.dp
         val dockW = screenW - dockSide * 2
@@ -109,7 +110,7 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
         val gridBottom = pillTop - 10.dp
         val gridH = gridBottom - gridTop
         val cellH = gridH / dev.kidyoh.liquid.data.HomeGrid.ROWS
-        val labelH = if (settings.showLabels) 21.dp else 0.dp
+        val labelH = if (settings.showLabels) 23.dp else 0.dp
         val iconTop = ((cellH - icon - labelH) / 2).coerceAtLeast(0.dp)
         val metrics = GridMetrics(cellW, cellH, iconTop)
         val dockPad = 10.dp
@@ -166,7 +167,8 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
         val position by remember(pager) { derivedStateOf { pager.currentPage + pager.currentPageOffsetFraction } }
         val todayAmount = (1f - position).coerceIn(0f, 1f)
         val libraryAmount = (position - homeCount).coerceIn(0f, 1f)
-        val overlay = controller.openFolder != null || controller.spotlight || controller.menu != null || controller.widgetGallery
+        val overlay = controller.openFolder != null || controller.spotlight || controller.menu != null || controller.widgetGallery ||
+            controller.notificationCenter || controller.controlCenter
         val overlayAmount by animateFloatAsState(if (overlay) 1f else 0f, spring(stiffness = 500f), label = "overlay")
         val blurWallpaper = maxOf(todayAmount, libraryAmount, overlayAmount)
         val dim = (if (dark && settings.dimWallpaperInDark) 0.22f else 0f)
@@ -215,10 +217,15 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
                         key = { it },
                         modifier = Modifier
                             .fillMaxSize()
-                            .swipeDown(controller, { pager.currentPage in 1..homeCount }) { startY ->
-                                if (startY < with(density) { (statusTop + 24.dp).toPx() } || settings.swipeDown == SwipeDownAction.Notifications) {
-                                    SystemActions.expandNotifications(ctx)
-                                } else controller.spotlight = true
+                            .swipeDown(controller, { pager.currentPage in 1..homeCount }) { start ->
+                                val topZone = with(density) { maxOf(statusTop + 40.dp, 72.dp).toPx() }
+                                val w = with(density) { screenW.toPx() }
+                                when {
+                                    start.y < topZone && start.x > w * 0.6f -> controller.controlCenter = true
+                                    start.y < topZone -> controller.notificationCenter = true
+                                    settings.swipeDown == SwipeDownAction.Notifications -> controller.notificationCenter = true
+                                    else -> controller.spotlight = true
+                                }
                             },
                     ) { page ->
                         when {
@@ -275,6 +282,8 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
                 EditChrome(controller, ((topReserve - 36.dp) / 2).coerceAtLeast(4.dp))
                 FolderOverlay(controller, layout, screenW)
                 Spotlight(controller, statusTop)
+                NotificationCenter(controller, statusTop, navBottom)
+                ControlCenter(controller, statusTop)
                 ContextMenuOverlay(controller, screenW, screenH)
                 WidgetGallery(controller, metrics)
                 RemoveDialog(controller)
@@ -338,7 +347,7 @@ private fun DragOverlay(controller: HomeController, metrics: GridMetrics) {
 }
 
 /** Swipe down on the Home Screen: Spotlight (or the notification shade from the top edge). */
-private fun Modifier.swipeDown(controller: HomeController, enabled: () -> Boolean, onSwipe: (Float) -> Unit): Modifier =
+private fun Modifier.swipeDown(controller: HomeController, enabled: () -> Boolean, onSwipe: (Offset) -> Unit): Modifier =
     pointerInput(controller) {
         val trigger = 48.dp.toPx()
         awaitEachGesture {
@@ -359,7 +368,7 @@ private fun Modifier.swipeDown(controller: HomeController, enabled: () -> Boolea
                 if (vertical == true) {
                     c.consume()
                     if (total.y > trigger) {
-                        onSwipe(down.position.y)
+                        onSwipe(down.position)
                         break
                     }
                 }

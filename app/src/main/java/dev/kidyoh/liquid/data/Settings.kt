@@ -16,7 +16,7 @@ data class LauncherSettings(
     val glass: Float = 0.35f,
     val theme: ThemeMode = ThemeMode.Auto,
     /** "preset:<id>", "photo" or "system". */
-    val wallpaper: String = "preset:aurora",
+    val wallpaper: String = "preset:orbit",
     val dimWallpaperInDark: Boolean = true,
     val columns: Int = 4,
     val iconScale: Float = 1f,
@@ -45,6 +45,13 @@ class SettingsStore(context: Context) {
 
     private fun load(): LauncherSettings {
         val d = LauncherSettings()
+        // v2: the new iOS 26-style Orbit wallpaper replaces the old default.
+        if (prefs.getInt("version", 1) < 2) {
+            prefs.edit {
+                if (prefs.getString("wallpaper", null) == "preset:aurora") putString("wallpaper", d.wallpaper)
+                putInt("version", 2)
+            }
+        }
         return LauncherSettings(
             iconStyle = enumOr(prefs.getString("iconStyle", null), d.iconStyle),
             glass = prefs.getFloat("glass", d.glass),

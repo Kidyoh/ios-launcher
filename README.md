@@ -3,9 +3,10 @@
 A real Android launcher (you can set it as your default Home app) that recreates the **iOS 26 / iOS 27 Home Screen** and its **Liquid Glass** design, written in Kotlin and Jetpack Compose.
 
 <p>
-  <img src="docs/screenshots/01_home.jpg" width="240" alt="Home Screen">
-  <img src="docs/screenshots/06_folder.jpg" width="240" alt="Folder">
-  <img src="docs/screenshots/11_app_library.jpg" width="240" alt="App Library">
+  <img src="docs/screenshots/01_home.jpg" width="200" alt="Home Screen">
+  <img src="docs/screenshots/16_notification_center.jpg" width="200" alt="Notification Center">
+  <img src="docs/screenshots/17_control_center.jpg" width="200" alt="Control Center">
+  <img src="docs/screenshots/11_app_library.jpg" width="200" alt="App Library">
 </p>
 
 ## Real Liquid Glass
@@ -26,13 +27,15 @@ The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liq
 - **Jiggle mode** — long-press empty space (or long-press an icon and move). Drag to rearrange, hold at the screen edge to change page, drop an app on another to make a **folder**, drag into / out of the dock and folders. Edit menu with **Add Widget**, **Customize**, **Edit Wallpaper**, plus **Undo / Redo** (an iOS 27 addition).
 - **Long-press menus** — app shortcuts, Edit Home Screen, Share, App Info, Remove App; iOS-style remove alert (Remove from Home Screen keeps it in the App Library, or Delete App).
 - **Folders** — glass tile with a 3×3 preview, zooms open, rename in edit mode, paged when full.
-- **Widgets** — Clock (analog), World Clock (day/night faces), Calendar, Month, Batteries.
+- **Widgets** — live **Weather** (your location, via the free Open-Meteo service), **Calendar** with today's events in their calendar colours, Clock, World Clock, Month, Batteries.
+- **Notification Center** — swipe down from the top-left: the iOS Lock Screen glass clock, your notifications on glass cards stacked per app, tap to open, swipe left to clear, flashlight and camera buttons.
+- **Control Center** — swipe down from the top-right: Wi-Fi, Bluetooth, Airplane and Hotspot (they open Android's panels, since apps can't flip those switches), Now Playing with media controls, rotation lock, screen mirroring, brightness and volume sliders, Do Not Disturb, flashlight, camera, calculator, timer, alarms, dark mode.
 - **Today View** — swipe right from the first page.
 - **App Library** — swipe past the last page: Suggestions, Recently Added and automatic categories; tap the search field for an A–Z list with a letter scrubber.
-- **Spotlight** — swipe down on the Home Screen: Siri-style suggestions, app search, a built-in **calculator** (`12*4+2` → 50) and web search. Swipe from the very top edge for notifications.
+- **Spotlight** — swipe down in the middle of the Home Screen: Siri-style suggestions, app search, a built-in **calculator** (`12*4+2` → 50) and web search. Swipe from the very top edge for notifications.
 - **Icon styles** — Default, Dark, Tinted (pick the colour) and Clear (frosted glass icons).
-- **Wallpapers** — 8 built-in iOS 26-style gradient wallpapers with dark variants, your own photo, or the system wallpaper; optionally set it as your Lock Screen too.
-- **Notification badges** — red count badges (needs notification access).
+- **Wallpapers** — 9 built-in iOS 26-style wallpapers (the default Orbit has the overlapping discs and glowing arc) with dark variants, your own photo, or the system wallpaper; optionally set it as your Lock Screen too.
+- **Notification badges** — red count badges with full numbers like iOS ("1,131").
 - Opening apps zooms out from the icon; Back and Home close whatever is open; work-profile apps are supported.
 
 <p>
@@ -42,7 +45,7 @@ The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liq
   <img src="docs/screenshots/12_today_view.jpg" width="200" alt="Today View">
 </p>
 <p>
-  <img src="docs/screenshots/02_home_dark.jpg" width="200" alt="Dark">
+  <img src="docs/screenshots/01b_home_light.jpg" width="200" alt="Light">
   <img src="docs/screenshots/04_home_tinted.jpg" width="200" alt="Tinted icons">
   <img src="docs/screenshots/03_home_clear.jpg" width="200" alt="Clear icons">
   <img src="docs/screenshots/10_widget_gallery.jpg" width="200" alt="Widgets">
@@ -52,6 +55,10 @@ The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liq
   <img src="docs/screenshots/14_settings.jpg" width="200" alt="Settings">
   <img src="docs/screenshots/15_icons_and_glass.jpg" width="200" alt="Icons and glass">
 </p>
+
+## Permissions it asks for
+
+Only when you use the feature: **location** (Weather widget), **calendar** (events in the Calendar widget), **notification access** (badges, Notification Center, Now Playing), **modify system settings** (brightness and rotation lock in Control Center) and **Do Not Disturb access**.
 
 ## Install
 
@@ -90,4 +97,5 @@ app/src/main/java/dev/kidyoh/liquid/
 
 - Screenshots are rendered on the JVM with Robolectric + Roborazzi using stand-in app icons; on your phone you'll see your real apps.
 - Third-party Android home-screen widgets aren't hosted yet — only the built-in iOS-style widgets.
+- Android doesn't let a launcher replace the lock screen, the status bar or other apps; Notification Center and Control Center are the launcher's own and open from the Home Screen.
 - Font: [Inter](https://rsms.me/inter/) (SIL Open Font License, see `licenses/`), the closest open match to SF Pro. Not affiliated with Apple.

@@ -43,6 +43,7 @@ import dev.kidyoh.liquid.data.WidgetItem
 import dev.kidyoh.liquid.data.WidgetKind
 import dev.kidyoh.liquid.data.span
 import dev.kidyoh.liquid.ui.widgets.WidgetCard
+import dev.kidyoh.liquid.ui.widgets.askForWidgetPermission
 
 /** Grid metrics shared by pages, the dock, folders and the drag overlay. */
 data class GridMetrics(val cellW: Dp, val cellH: Dp, val iconTop: Dp)
@@ -140,7 +141,7 @@ fun WidgetCell(item: WidgetItem, source: DragSource, controller: HomeController,
             .itemGestures(
                 key = item.id,
                 editMode = { controller.editMode },
-                onTap = { if (!controller.editMode) openWidgetApp(ctx, item.kind) },
+                onTap = { if (!controller.editMode && !askForWidgetPermission(item.kind, ctx)) openWidgetApp(ctx, item.kind) },
                 onLongPress = {
                     if (env.settings.haptics) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     controller.menu = MenuRequest(item, source, body.value, null)
@@ -175,6 +176,10 @@ fun openWidgetApp(ctx: android.content.Context, kind: WidgetKind) {
         WidgetKind.AnalogClock, WidgetKind.WorldClock -> Intent(AlarmClock.ACTION_SHOW_ALARMS)
         WidgetKind.Calendar, WidgetKind.Month -> Intent(Intent.ACTION_VIEW, CalendarContract.CONTENT_URI.buildUpon().appendPath("time").build())
         WidgetKind.Battery -> Intent(Intent.ACTION_POWER_USAGE_SUMMARY)
+        WidgetKind.Weather -> {
+            dev.kidyoh.liquid.system.SystemActions.webSearch(ctx, "weather")
+            return
+        }
     }
     runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
