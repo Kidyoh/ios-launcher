@@ -69,6 +69,7 @@ import dev.kidyoh.liquid.ui.island.ISLAND_HEIGHT
 import dev.kidyoh.liquid.ui.island.IslandController
 import dev.kidyoh.liquid.ui.island.IslandOverlay
 import dev.kidyoh.liquid.ui.island.cameraCenter
+import dev.kidyoh.liquid.ui.island.idleSizeFor
 import dev.kidyoh.liquid.ui.library.AppLibrary
 import dev.kidyoh.liquid.ui.search.Spotlight
 import dev.kidyoh.liquid.ui.theme.isDark
@@ -313,13 +314,14 @@ fun HomeScreen(controller: HomeController, homePresses: Flow<Unit>) {
                     }
                     val view = LocalView.current
                     val cam = remember(view, wPx) { cameraCenter(view) }
-                    val centerY = with(density) { cam?.second?.toDp() ?: (statusTop / 2) }
-                    val dx = with(density) { cam?.let { (it.first - wPx / 2f).toDp() } ?: 0.dp }
+                    val centerY = with(density) { cam?.y?.toDp() ?: (statusTop / 2) }
+                    val dx = with(density) { cam?.let { (it.x - wPx / 2f).toDp() } ?: 0.dp }
+                    val idle = if (settings.islandHideIdle) idleSizeFor(cam?.width, density.density) else null
                     if (island.expanded) {
                         Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { island.collapse() } })
                     }
                     Box(Modifier.fillMaxWidth().offset(x = dx, y = (centerY - (ISLAND_HEIGHT / 2).dp).coerceAtLeast(8.dp))) {
-                        DynamicIsland(island, screenW - 20.dp, Modifier.align(Alignment.TopCenter))
+                        DynamicIsland(island, screenW - 20.dp, Modifier.align(Alignment.TopCenter), idleSize = idle)
                     }
                 }
                 }

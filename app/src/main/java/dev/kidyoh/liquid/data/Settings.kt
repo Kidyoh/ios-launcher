@@ -33,6 +33,8 @@ data class LauncherSettings(
     val dynamicIsland: Boolean = true,
     /** Show the Dynamic Island over every app (needs "Display over other apps"). */
     val islandEverywhere: Boolean = true,
+    /** When nothing's happening the island shrinks around the camera (or vanishes) instead of staying a pill. */
+    val islandHideIdle: Boolean = true,
 )
 
 class SettingsStore(context: Context) {
@@ -76,6 +78,7 @@ class SettingsStore(context: Context) {
             iosIcons = prefs.getBoolean("iosIcons", d.iosIcons),
             dynamicIsland = prefs.getBoolean("dynamicIsland", d.dynamicIsland),
             islandEverywhere = prefs.getBoolean("islandEverywhere", d.islandEverywhere),
+            islandHideIdle = prefs.getBoolean("islandHideIdle", d.islandHideIdle),
         )
     }
 
@@ -98,6 +101,7 @@ class SettingsStore(context: Context) {
         putBoolean("iosIcons", s.iosIcons)
         putBoolean("dynamicIsland", s.dynamicIsland)
         putBoolean("islandEverywhere", s.islandEverywhere)
+        putBoolean("islandHideIdle", s.islandHideIdle)
     }
 
     private inline fun <reified T : Enum<T>> enumOr(name: String?, fallback: T): T =

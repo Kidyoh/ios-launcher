@@ -238,12 +238,16 @@ private fun RootScreen(s: LauncherSettings, host: SettingsHost, push: (String) -
             Section(
                 "Dynamic Island",
                 footer = if (s.islandEverywhere && !host.overlayAccess) "To show the island over other apps, allow \"Display over other apps\". Music and notifications in the island need notification access."
-                else "Grows around your front camera for music, charging, the silent switch and new notifications. Tap it while music plays for controls.",
+                else "Opens around your front camera for music, charging, the silent switch and new notifications, then closes by itself. Tap or swipe down on music for controls; swipe up to put it away.",
             ) {
                 ToggleRow("Dynamic Island", s.dynamicIsland, Glyphs.Sparkle, Color(0xFF1C1C1E).takeIf { !p.dark } ?: IOS.Indigo) { v ->
                     app.settings.update { it.copy(dynamicIsland = v) }
                 }
                 if (s.dynamicIsland) {
+                    RowDivider()
+                    ToggleRow("Hide When Idle", s.islandHideIdle, Glyphs.Focus, IOS.Gray) { v ->
+                        app.settings.update { it.copy(islandHideIdle = v) }
+                    }
                     RowDivider()
                     ToggleRow("Show Over All Apps", s.islandEverywhere && host.overlayAccess, Glyphs.Mirror, IOS.Blue) { v ->
                         if (v && !host.overlayAccess) host.onOverlayAccess()

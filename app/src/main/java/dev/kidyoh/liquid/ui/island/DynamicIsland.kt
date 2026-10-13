@@ -6,6 +6,18 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -77,14 +89,23 @@ private val textStyle = TextStyle(fontFamily = Inter, color = white)
 /** Which layout the island morphs between. Media keeps one key per track so it doesn't re-animate every tick. */
 private data class Shape(val kind: String, val expanded: Boolean)
 
-/** The black pill around the front camera, morphing with a springy iOS-style animation. */
+/**
+ * The black pill around the front camera, morphing with a springy iOS-style animation.
+ *
+ * @param idleSize size when nothing is happening: a small ring around the camera (or zero to vanish).
+ *                 null keeps the classic always-on pill.
+ */
 @Composable
-fun DynamicIsland(island: IslandController, maxWidth: Dp, modifier: Modifier = Modifier) {
+fun DynamicIsland(island: IslandController, maxWidth: Dp, modifier: Modifier = Modifier, idleSize: DpSize? = null) {
     val ctx = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
     val mode = island.mode
     val expanded = island.expanded
     val big = expanded || mode is IslandMode.Note
     val corner by animateDpAsState(if (big) 42.dp else (ISLAND_HEIGHT / 2).dp, spring(dampingRatio = 0.75f, stiffness = 400f), label = "corner")
+    var pressed by remember { mutableStateOf(false) }
+    val squish by animateFloatAsState(if (pressed) 0.95f else 1f, spring(dampingRatio = 0.5f, stiffness = 900f), label = "squish")
     val shapeKey = Shape(
         when (mode) {
             IslandMode.Idle -> "idle"
@@ -95,20 +116,68 @@ fun DynamicIsland(island: IslandController, maxWidth: Dp, modifier: Modifier = M
         },
         expanded,
     )
+    val wide = minOf(maxWidth, 420.dp)
     Box(
         modifier
+            .graphicsLayer {
+                scaleX = squish; scaleY = squish
+                transformOrigin = TransformOrigin(0.5f, 0f)
+            }
             .clip(RoundedCornerShape(corner))
             .background(Color.Black)
+            // Any touch inside (including the player buttons) keeps it open a bit longer.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        if (e.type == PointerEventType.Press) island.interacted()
+                    }
+                }
+            }
             .pointerInput(mode, expanded) {
                 detectTapGestures(
+                    onPress = {
+                        pressed = true
+                        tryAwaitRelease()
+                        pressed = false
+                    },
                     onTap = {
                         when (mode) {
-                            is IslandMode.Note -> { openNotification(ctx, mode.item); island.showForTest(IslandMode.Idle) }
-                            else -> island.tap()
+                            is IslandMode.Note -> { openNotification(ctx, mode.item); island.dismissAlert() }
+                            is IslandMode.Media -> {
+                                if (!expanded) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                island.tap()
+                            }
+                            IslandMode.Idle -> Unit
+                            else -> island.dismissAlert()
                         }
                     },
-                    onLongPress = { if (mode is IslandMode.Media) island.expanded = true },
+                    onLongPress = {
+                        if (mode is IslandMode.Media && !expanded) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            island.expand()
+                        }
+                    },
                 )
+            }
+            .pointerInput(mode, expanded) {
+                val threshold = with(density) { 22.dp.toPx() }
+                var dy = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { dy = 0f },
+                    onDragEnd = {
+                        when {
+                            dy > threshold && mode is IslandMode.Media && !expanded -> {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                island.expand()
+                            }
+                            dy < -threshold -> island.dismissAlert()
+                        }
+                    },
+                ) { change, amount ->
+                    dy += amount
+                    change.consume()
+                }
             }
     ) {
         AnimatedContent(
@@ -121,17 +190,22 @@ fun DynamicIsland(island: IslandController, maxWidth: Dp, modifier: Modifier = M
         ) { key ->
             val m = island.mode
             when {
-                key.kind == "idle" -> Box(Modifier.size(122.dp, ISLAND_HEIGHT.dp))
-                key.kind == "media" && m is IslandMode.Media && key.expanded -> MediaExpanded(m, maxWidth)
-                key.kind == "media" && m is IslandMode.Media -> MediaCompact(m)
-                key.kind == "charge" && m is IslandMode.Charging -> Charging(m)
-                key.kind.startsWith("note") && m is IslandMode.Note -> NoteView(m, maxWidth)
-                key.kind.startsWith("ring") && m is IslandMode.Ringer -> RingerView(m)
+                key.kind == "idle" -> Box(if (idleSize != null) Modifier.size(idleSize) else Modifier.size(122.dp, ISLAND_HEIGHT.dp))
+                key.kind == "media" && m is IslandMode.Media && key.expanded -> MediaExpanded(m, wide)
+                key.kind == "media" && m is IslandMode.Media -> MediaCompact(m, minOf(232.dp, maxWidth * 0.62f))
+                key.kind == "charge" && m is IslandMode.Charging -> Charging(m, minOf(310.dp, maxWidth * 0.84f))
+                key.kind.startsWith("note") && m is IslandMode.Note -> NoteView(m, wide)
+                key.kind.startsWith("ring") && m is IslandMode.Ringer -> RingerView(m, minOf(236.dp, maxWidth * 0.64f))
                 else -> Box(Modifier.size(122.dp, ISLAND_HEIGHT.dp))
             }
         }
     }
 }
+
+/** A ring hugging the camera hole for the idle island, or nothing when there's no hole to hug. */
+fun idleSizeFor(cutoutWidthPx: Float?, density: Float): DpSize =
+    if (cutoutWidthPx == null || cutoutWidthPx <= 0f) DpSize(0.dp, ISLAND_HEIGHT.dp)
+    else DpSize(maxOf(ISLAND_HEIGHT.toFloat(), cutoutWidthPx / density + 10f).dp, ISLAND_HEIGHT.dp)
 
 @Composable
 private fun Art(m: IslandMode.Media, size: Dp, corner: Dp) {
@@ -143,8 +217,8 @@ private fun Art(m: IslandMode.Media, size: Dp, corner: Dp) {
 }
 
 @Composable
-private fun MediaCompact(m: IslandMode.Media) {
-    Row(Modifier.size(232.dp, ISLAND_HEIGHT.dp).padding(horizontal = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun MediaCompact(m: IslandMode.Media, width: Dp) {
+    Row(Modifier.size(width, ISLAND_HEIGHT.dp).padding(horizontal = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Art(m, 24.dp, 7.dp)
         Spacer(Modifier.weight(1f))
         Waveform(m.accent, m.np.playing, Modifier.size(24.dp, 16.dp))
@@ -219,9 +293,9 @@ fun Waveform(color: Color, playing: Boolean, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Charging(m: IslandMode.Charging) {
+private fun Charging(m: IslandMode.Charging, width: Dp) {
     val green = if (m.charging) IOS.Green else white
-    Row(Modifier.size(310.dp, ISLAND_HEIGHT.dp).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.size(width, ISLAND_HEIGHT.dp).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(if (m.charging) "Charging" else "Unplugged", style = textStyle.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
         Spacer(Modifier.weight(1f))
         Text("${m.level}%", style = textStyle.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = green))
@@ -233,8 +307,8 @@ private fun Charging(m: IslandMode.Charging) {
 }
 
 @Composable
-private fun RingerView(m: IslandMode.Ringer) {
-    Row(Modifier.size(236.dp, ISLAND_HEIGHT.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun RingerView(m: IslandMode.Ringer, width: Dp) {
+    Row(Modifier.size(width, ISLAND_HEIGHT.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(width = 44.dp, height = 26.dp).clip(CircleShape).background(if (m.silent) IOS.Red else Color(0xFF3A3A3C)),
             contentAlignment = Alignment.Center,
@@ -270,10 +344,12 @@ private fun NoteView(m: IslandMode.Note, maxWidth: Dp) {
     }
 }
 
-/** Where the front camera is, so the island can sit around it. Returns (centerX, centerY) in px or null. */
-fun cameraCenter(view: android.view.View): Pair<Float, Float>? {
+/** Where the front camera is, in px: centre and width. Null when there's no top cutout. */
+data class Camera(val x: Float, val y: Float, val width: Float)
+
+fun cameraCenter(view: android.view.View): Camera? {
     if (Build.VERSION.SDK_INT < 28) return null
     val cutout = view.rootWindowInsets?.displayCutout ?: return null
     val r = cutout.boundingRects.firstOrNull { it.top <= 0 || it.top < view.height / 10 } ?: return null
-    return r.exactCenterX() to r.exactCenterY()
+    return Camera(r.exactCenterX(), r.exactCenterY(), r.width().toFloat())
 }

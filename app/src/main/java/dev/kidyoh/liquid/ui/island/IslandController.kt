@@ -43,6 +43,7 @@ class IslandController(private val context: Context, private val scope: Coroutin
     var mode by mutableStateOf<IslandMode>(IslandMode.Idle)
         private set
     var expanded by mutableStateOf(false)
+        private set
 
     private val media = MediaWatcher(context)
     private var alert: IslandMode? = null
@@ -51,6 +52,9 @@ class IslandController(private val context: Context, private val scope: Coroutin
     private var accent = Color(0xFFFF375F)
     private var lastCharging: Boolean? = null
     private var jobs = mutableListOf<Job>()
+    private var collapseJob: Job? = null
+    private var pausedSince = 0L
+    private var pauseJob: Job? = null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -65,6 +69,8 @@ class IslandController(private val context: Context, private val scope: Coroutin
                     }
                 }
                 AudioManager.RINGER_MODE_CHANGED_ACTION -> {
+                    // This broadcast is sticky: ignore the copy Android replays when we register.
+                    if (isInitialStickyBroadcast) return
                     val m = i.getIntExtra(AudioManager.EXTRA_RINGER_MODE, AudioManager.RINGER_MODE_NORMAL)
                     show(IslandMode.Ringer(silent = m != AudioManager.RINGER_MODE_NORMAL), 2200)
                 }
@@ -98,15 +104,42 @@ class IslandController(private val context: Context, private val scope: Coroutin
         jobs.forEach { it.cancel() }
         jobs.clear()
         alertJob?.cancel()
+        collapseJob?.cancel()
+        pauseJob?.cancel()
     }
 
-    /** Tap: media expands / collapses; anything else collapses. */
+    /** Tap: media expands / collapses. */
     fun tap() {
-        expanded = !expanded && mode is IslandMode.Media
+        if (expanded) collapse() else expand()
+    }
+
+    fun expand() {
+        if (mode !is IslandMode.Media) return
+        expanded = true
+        interacted()
     }
 
     fun collapse() {
         expanded = false
+        collapseJob?.cancel()
+    }
+
+    /** Any touch on the island keeps it open a little longer; left alone it closes itself. */
+    fun interacted() {
+        collapseJob?.cancel()
+        if (!expanded) return
+        collapseJob = scope.launch {
+            delay(AUTO_COLLAPSE_MS)
+            expanded = false
+        }
+    }
+
+    /** Swipe up on a pop-out alert puts it away early. */
+    fun dismissAlert() {
+        if (alert == null) { collapse(); return }
+        alertJob?.cancel()
+        alert = null
+        refresh()
     }
 
     /** Screenshot tests: show a given state directly. */
@@ -114,12 +147,12 @@ class IslandController(private val context: Context, private val scope: Coroutin
         alertJob?.cancel()
         alert = null
         mode = m
-        expanded = expand
+        expanded = expand && m is IslandMode.Media
     }
 
     fun show(m: IslandMode, millis: Long) {
         alert = m
-        expanded = false
+        collapse()
         refresh()
         alertJob?.cancel()
         alertJob = scope.launch {
@@ -131,8 +164,32 @@ class IslandController(private val context: Context, private val scope: Coroutin
 
     private fun refresh() {
         val np = media.state.value
-        mode = alert ?: if (np.active) IslandMode.Media(np, accentOf(np.art)) else IslandMode.Idle
-        if (mode !is IslandMode.Media) expanded = false
+        mode = alert ?: if (np.active && !pausedTooLong(np)) IslandMode.Media(np, accentOf(np.art)) else IslandMode.Idle
+        if (mode !is IslandMode.Media) collapse()
+    }
+
+    /** Paused music keeps its place for a while, then the island closes, like an iOS Live Activity. */
+    private fun pausedTooLong(np: NowPlaying): Boolean {
+        if (np.playing || !np.active) {
+            pausedSince = 0L
+            pauseJob?.cancel()
+            return false
+        }
+        val now = System.currentTimeMillis()
+        if (pausedSince == 0L) {
+            pausedSince = now
+            pauseJob?.cancel()
+            pauseJob = scope.launch {
+                delay(PAUSED_LINGER_MS + 50)
+                refresh()
+            }
+        }
+        return now - pausedSince >= PAUSED_LINGER_MS
+    }
+
+    companion object {
+        const val AUTO_COLLAPSE_MS = 6_000L
+        const val PAUSED_LINGER_MS = 30_000L
     }
 
     private fun accentOf(art: Bitmap?): Color {

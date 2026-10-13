@@ -23,7 +23,7 @@ The **Liquid Glass slider** from iOS 27 is in *Launcher Settings → Icons & Liq
 
 ## Features
 
-- **Dynamic Island** — a black pill around your front camera that springs open for music (album art and live sound bars; tap for the full player with progress and controls), charging, the silent switch and new notifications. With *Display over other apps* allowed it shows over **every** app; it steps aside in landscape.
+- **Dynamic Island** — springs open around your front camera for music (album art and live sound bars; tap or swipe down for the full player), charging, the silent switch and new notifications, then **closes by itself**: alerts after a few seconds, the expanded player after 6 s untouched, paused music after 30 s. When idle it shrinks to a ring around the camera (or the classic pill if you turn off *Hide When Idle*). Press it and it squishes; swipe up or tap outside to put it away. With *Display over other apps* allowed it shows over **every** app; it steps aside in landscape.
 - **iPhone-style icons** — an original icon set in the iOS style for built-in apps (Phone, Messages, your browser, Settings, Camera, Photos, Mail, a Calendar icon showing today's date, Clock, Maps, Notes, Calculator, Contacts, Files, Music and more), matched automatically to your default apps. Long-press any app → **Change Icon…** to pick one, or **Rename…** to change its Home Screen name.
 
 - **Home Screen** — 4×6 (or 5×6) pages, squircle icons, labels, the iOS 26 glass **Search** pill that turns into page dots while you swipe, glass **dock**.
